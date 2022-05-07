@@ -42,7 +42,9 @@ class serialHandler:
         logging.debug("Automatically establishing serial communication")
         logging.info(f"{len(ports)} available ports found")
         for port, desc, hwid in sorted(ports):
-            if "/dev/ttyUSB" or "/dev/ttyACM" in port:
+            # TODO : Verify which setting this is in based on device
+            # if ("/dev/ttyUSB" in port) or ("/dev/ttyACM" in port): # For Raspbery Pi
+            if ("COM" in port): # For testing on Windows Machines 
                 self.assignPort(port)
         # TODO : ERROR if there are not 2 devices available
                 
@@ -65,7 +67,7 @@ class serialHandler:
         typeData = temp.sendData("TYPE")
         # Assigns motor to motorCom Object
         if typeData == "MOTOR":
-            logging.info(f"Motor Arduino at {port})")
+            logging.info(f"Motor Arduino at {port}")
             self.motorCom = temp
             temp = None
         # Assigns sensor to sensorCom Object
