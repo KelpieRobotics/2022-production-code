@@ -116,7 +116,7 @@ class arduinoCom:
 
 
 if __name__ == '__main__':
-    logging.basicConfig(filename = "serialComMain.log",encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(filename = "scTestLog.log",encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     c = arduinoCom("COM4", 9600)
     c.startConnection()
     while True:
