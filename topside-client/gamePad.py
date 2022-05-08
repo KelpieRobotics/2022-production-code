@@ -127,5 +127,5 @@ class XboxController(object):
 
 if __name__ == '__main__':
     joy = XboxController()
-    # while True:
-    #     print(f"{joy.readMainButtons()}{joy.readTriggers()}{joy.readAnalogSticks()}")
+    while True:
+        print(f"{joy.readMainButtons()}{joy.readTriggers()}{joy.readAnalogSticks()}")

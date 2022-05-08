@@ -84,11 +84,15 @@ class tcpServer:
         Raises:
             null
         """
-        logging.debug(f"Starting listen for {serverObj}")
-        client_socket, clientAddress = serverObj.accept()
-        logging.info(f"Connection from: {clientAddress}")
+        client_socket = None
         while self.runThreading:
             try: 
+                if client_socket == None:
+                    client_socket, clientAddress = serverObj.accept()
+                    logging.debug(f"Starting listen for {serverObj}")
+                    logging.info(f"Connection from: {clientAddress}")
+
+
                 # Received Data from Client
                 receivedData = client_socket.recv(1024).decode('utf-8')
                 if not receivedData:
@@ -98,6 +102,7 @@ class tcpServer:
                 client_socket.send(transmitData.encode('utf-8'))
             except socket.error as e: 
                 logging.error(f"{serverObj} - Socket Error Occurred {e}")
+                client_socket = None
             except Exception as e:
                 logging.error(f"{serverObj} - An Error has occurred {e}")
    
@@ -144,20 +149,12 @@ class tcpServer:
         # Commands Starting with SEN are for sensors, thus they are sent to the sensor arduino
         elif data.startswith("SEN"):
             return self.serialH.sendSensorCommands("GET")
-        elif data.startswith("STOP"):
+        elif data.startswith("STOP"): # FIXME: This no longer stops the threads
             logging.warning("Received Stop Command")
             self.runThreading = False
             self.stopAllServices()
         else:
             return "INVALID COMMAND"
-
-
-
-
-
-
-
-
 
 
 
