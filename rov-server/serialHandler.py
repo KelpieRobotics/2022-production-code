@@ -104,10 +104,17 @@ class serialHandler:
             none
         """
         logging.debug("Closing all Serial Connections")
-        self.motorCom.closeConnection()
-        self.sensorCom.closeConnection()
+        if not(self.motorCom == None):
+            self.motorCom.closeConnection()
+        else:
+            logging.debug("Cannot close Motor connection, as it was not established")
+        if not(self.sensorCom == None):
+            self.sensorCom.closeConnection()
+        else:
+            logging.debug("Cannot close Sensor connection, as it was not established")
 
-        
+
+
 if __name__ == '__main__':
     logging.basicConfig(filename = "shTestLog.log",encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     sh = serialHandler()
