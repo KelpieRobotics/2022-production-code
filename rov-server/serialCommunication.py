@@ -40,6 +40,14 @@ class arduinoCom:
             self.serialConnection = serial.Serial(self.comPort, self.baudRate, timeout=1)
             self.serialConnection.flush()
             logging.info(f"Connected to {self.comPort} at {self.baudRate}")
+            timeout = 0
+            while timeout < 10:
+                serialFeedback = self.serialConnection.readline().decode('utf-8').rstrip()
+                if(serialFeedback == "READY"):
+                    logging.debug(f"Arduino at {self.comPort} READY")
+                    break
+                timeout += 1
+            # TODO : Needs not ready error
             return True
         except serial.SerialException as e:
             logging.error(f"Device not available to {self.comPort} at {self.baudRate} Exception: {e}")
@@ -47,11 +55,7 @@ class arduinoCom:
 
 
 
-        # serialFeedback = self.serialConnection.readline().decode('utf-8').rstrip()
-        # if(serialFeedback == "READY"):
-        #     print(f"connected to {self.comPort}")
-        #     logging.debug(f"Arduino at {")
-        # TODO : Needs not ready error
+        
 
         
 
