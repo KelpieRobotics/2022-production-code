@@ -1,4 +1,3 @@
-from cmath import log
 from serialHandler import serialHandler, unableToConnectToArduino, unassignedArduinoType
 import threading
 import socket
