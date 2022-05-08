@@ -49,8 +49,8 @@ class serialHandler:
         logging.info(f"{len(ports)} available ports found")
         for port, desc, hwid in sorted(ports):
             # TODO : Verify which setting this is in based on device
-            # if ("/dev/ttyUSB" in port) or ("/dev/ttyACM" in port): # For Raspbery Pi
-            if ("COM" in port): # For testing on Windows Machines 
+            if ("/dev/ttyUSB" in port) or ("/dev/ttyACM" in port): # For Raspbery Pi
+            # if ("COM" in port): # For testing on Windows Machines 
                 self.assignPort(port)
         # Throws expections for not enough arduions are connected
         if (self.motorCom == None) and (self.sensorCom == None):
