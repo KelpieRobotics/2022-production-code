@@ -90,7 +90,7 @@ class serialHandler:
                 temp = None
             # Desregards other serial devices
             else:
-                logging.info(f"Unknown Serial Device at {port}")
+                logging.info(f"Unknown Serial Device at {port}, '{typeData}'")
                 temp.closeConnection()
                 temp = None
         else:
