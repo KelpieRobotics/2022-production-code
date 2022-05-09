@@ -36,7 +36,7 @@ class arduinoCom:
             None
         """
         try:
-            self.serialConnection = serial.Serial(self.comPort, self.baudRate, timeout=1)
+            self.serialConnection = serial.Serial(self.comPort, self.baudRate, timeout=5)
             self.serialConnection.flush()
             logging.info(f"Connected to {self.comPort} at {self.baudRate}")
             timeout = 0
