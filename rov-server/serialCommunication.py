@@ -1,4 +1,3 @@
-from cmath import log
 import serial
 import logging
 import time
