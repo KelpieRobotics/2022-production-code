@@ -170,7 +170,7 @@ void SetClawState(int state)
         digitalWrite(PIN__CLAW_2, LOW); 
         break;
     }
-     Serial.println(state);
+    //  Serial.println(state);
 }
 
 void setup()
@@ -419,7 +419,7 @@ void ParseCommands(String dataFromPi)
     speed_Y = speed_Y_String.toFloat();
     speed_Rotation = speed_Rotation_String.toFloat();
     state_Claw = R_trigger + L_trigger; // -1 = open, 0 = stopped, 1 = closed
-//    Serial.println("OK");
+   Serial.println("OK");
 
 //    Serial.print(speed_X);
 //    Serial.print(speed_Y);
