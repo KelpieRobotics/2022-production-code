@@ -175,6 +175,6 @@ class tcpServer:
 
 if __name__ == '__main__':
     logging.basicConfig(filename = "log.log", encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    c = tcpServer("192.168.40.127",8000)
+    c = tcpServer("10.10.2.5",8000)
     c.startSockets()
     c.startListeningThreads()

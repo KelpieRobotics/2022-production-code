@@ -101,7 +101,7 @@ class main:
 
 if __name__ == '__main__':
     logging.basicConfig(filename = "log.log", encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    client = main("192.168.40.127", 8000)
+    client = main("10.10.2.5", 8000)
     client.startSockets()
     client.startThreads()
 
