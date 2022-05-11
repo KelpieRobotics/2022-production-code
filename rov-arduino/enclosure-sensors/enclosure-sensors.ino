@@ -1,10 +1,13 @@
 // Import Libraries
 #include <DHT.h>
+#include "PMBus.h"
 
 // Define Pins
 const int PIN_DHT = 2;  // DHT22 sensor pin
 const int PIN_Leak = 3; // Leak sensor pin
 DHT dht(PIN_DHT, DHT22);
+
+PMBus pmbus;
 
 // Define Variables
 String outputData;
@@ -16,8 +19,15 @@ void setup()
     // Prepare Pins
     dht.begin();
     pinMode(PIN_Leak, INPUT);
+
+    // begin i2c comms
+    Wire.begin();
+    Wire.setClock(400000); // set clock frequency, 400k is fast mode
+
     // Serial Ready
     Serial.println("READY");
+
+    
 }
 
 void loop()
@@ -38,7 +48,8 @@ String processData(String inputData)
     }
     else
     {
-        return String(getHumidity()) + "\t" + String(getTemperature()) + "\t" + String(getLeak());
+        String pmbus_data = String(pmbus.vin_request()) + "\t" + String(pmbus.vout_request())+ "\t" + String(pmbus.current_out_request())+ "\t" + String(pmbus.temp_request())+ "\t" + String(pmbus.power_out_request()); 
+        return String(getHumidity()) + "\t" + String(getTemperature()) + "\t" + String(getLeak()) + "\t" + pmbus_data;
     }
 }
 
