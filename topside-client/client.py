@@ -18,7 +18,7 @@ class main:
         self.gamePad = XboxController()
         self.tcp_motors = None
         self.tcp_sensors = None
-        self.dataSave = dataLogger(["time","humidity","temperature","leak"])
+        self.dataSave = dataLogger(["Time(s)","Humidity(%)","Enclosure Temperature(°C)","Leak","Vin(Vrms)","Vout(Vrms)","Current Out(A)", "PMBus Temperature(°C)", "Power Out(W)"])
 
 
 
