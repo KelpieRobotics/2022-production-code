@@ -1,6 +1,7 @@
 from tcpClient import tcpClient
 from gamePad import XboxController
 from dataLogger import dataLogger
+from captureOverlay import captureOverlay
 import threading
 import logging
 import time
@@ -18,9 +19,8 @@ class main:
         self.gamePad = XboxController()
         self.tcp_motors = None
         self.tcp_sensors = None
+        self.overlay = captureOverlay()
         self.dataSave = dataLogger(["time","humidity","temperature","leak"])
-
-
 
     def startSockets(self):
         logging.info("Starting Sockets")
@@ -39,6 +39,7 @@ class main:
             sensorThread = threading.Thread(target=self.__Thread_process_data__)
             motorThread.daemon = True
             sensorThread.daemon = True
+            motorThread.daemon = True
             motorThread.start()
             sensorThread.start()
             while motorThread.is_alive() and sensorThread.is_alive():
@@ -59,7 +60,9 @@ class main:
                 # COM Port is active
                 if self.sendComPortCommands:
                     formmatedData = f"{gamePadSticks[1]},{gamePadSticks[2]}\t{gamePadSticks[4]},{gamePadSticks[5]}\t{gamePadTriggers[0]},{gamePadTriggers[1]},{gamePadTriggers[2]},{gamePadTriggers[3]}"
-                    print(self.tcp_motors.sendData("MOT"+formmatedData))
+                    motorState = self.tcp_motors.sendData("MOT"+formmatedData)
+                    print(motorState)
+                    self.overlay.updateMotorState(motorState)
                 # SELECT + START to stop threading
                 if gamePadButtons[4] == 1 and gamePadButtons[5]== 1:
                     print("STOPING THREADS")
@@ -88,6 +91,7 @@ class main:
                 returnedDataCSV = returnedData.replace("\t",",")
                 returnedDataCSV = f"{self.current_milli_time()},{returnedDataCSV}"
                 returnedDataList = returnedDataCSV.split(",")
+                self.overlay.updateData(returnedDataList)
                 print(returnedDataList)
                 self.dataSave.writeCSVString(returnedDataCSV)
                 lastDataCap = self.current_milli_time()
@@ -101,7 +105,7 @@ class main:
 
 if __name__ == '__main__':
     logging.basicConfig(filename = "log.log", encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    client = main("10.10.2.5", 8000)
+    client = main("localhost", 8000)
     client.startSockets()
     client.startThreads()
 

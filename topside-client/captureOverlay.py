@@ -1,10 +1,17 @@
 import tkinter as tk
 from tkinter import ttk
+import threading
 
 # https://stackoverflow.com/questions/459083/how-do-you-run-your-own-code-alongside-tkinters-event-loop
 
-class captureOverlay:
+class captureOverlay (threading.Thread):
     def __init__(self) -> None:
+        threading.Thread.__init__(self)
+        self.start()
+    def callback(self):
+        self.root.quit()
+
+    def run(self):
         self.app = tk.Tk()
         self.app.title('Kelpie Data Capture Overlay')
         self.app.geometry('1920x540')
@@ -24,18 +31,38 @@ class captureOverlay:
         self.power_info_label.grid(column=2, row=0, sticky=tk.W, padx=5, pady=5)
 
 
-        # erroe1 = ttk.Label(self.app, text="", font=('Arial',50))
-        # erroe1.grid(column=2, row=1, sticky=tk.E, padx=5, pady=5)
-        # erroe2 = ttk.Label(self.app, text="", font=('Arial',50))
-        # erroe2.grid(column=2, row=2, sticky=tk.E, padx=5, pady=5)
+        self.sensorError = ttk.Label(self.app, text="", font=('Arial',50))
+        self.sensorError.grid(column=2, row=1, sticky=tk.E, padx=5, pady=5)
+        self.motorError = ttk.Label(self.app, text="", font=('Arial',50))
+        self.motorError.grid(column=2, row=2, sticky=tk.E, padx=5, pady=5)
 
-        # leak = ttk.Label(self.app, text="",font=('Arial',75))
-        # leak.grid(column=1, row=3, sticky=tk.S, padx=5, pady=5)
-
-        
-    def startLoop(self):
+        self.leakError = ttk.Label(self.app, text="",font=('Arial',75))
+        self.leakError.grid(column=1, row=3, sticky=tk.S, padx=5, pady=5)
         self.app.mainloop()
-    def updateData(self, inut):
-        self.temperature_label['text'] = input
+    
+    def updateMotorState(self, newData):
+        if newData == "OK":
+            self.motorError['text'] = ""
+        else:
+            self.motorError['text'] = "MOTOR COM LOST"
+
+
+    def updateData(self, newData):
+        if newData[1] == "ERROR":
+            self.sensorError['text'] = "SENSOR COM LOST"
+            self.humidity_label['text'] = ""
+            self.temperature_label['text'] = ""
+            self.power_info_label['text'] = ""
+
+        else:
+            if newData[3] == '1':
+                self.leakError['text'] = "LEAK\nDETECTED"
+            else:
+                self.leakError['text'] = ""
+            self.sensorError['text'] = ""
+            self.humidity_label['text'] = f"Humidity: {newData[1]}%"
+            self.temperature_label['text'] = f"Enc. Temperature: {newData[2]}C PMBus: {newData[7]}"
+            self.power_info_label['text'] = f"V_in: {newData[4]}V V_out: {newData[5]}V {newData[6]}A {newData[8]}W"
+        
 if __name__ == '__main__':
-    captureOverlay().startLoop()
+    captureOverlay()
