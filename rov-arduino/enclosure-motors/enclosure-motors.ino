@@ -43,7 +43,7 @@ Servo leftVertical;
 Servo rightVertical;
 
 // define data constants
-const float MAX_SPEED = 200.0f; // Max speed of motors, should be between 0 and 400
+const float MAX_SPEED = 225.0f; // Max speed of motors, should be between 0 and 400
 
 const float MOD_FRONT_LEFT = 1.0f;     // Modifier for front left motor, should be between 0 and 1
 const float MOD_FRONT_RIGHT = 1.0f;    // Modifier for front right motor, should be between 0 and 1
@@ -80,16 +80,50 @@ void MoveVertical(float speed_Y)
 
 void MoveHorizontal(float speed_X, float speed_Z)
 {
-    float totalSpeed = MAX_SPEED * sqrt(pow(speed_X, 2) + pow(speed_Z, 2)) / sqrt(2.0f);
+    float x_norm = (speed_X == 0.0f) ? 0.00000001f : speed_X;
+    float z_norm = (speed_Z == 0.0f) ? 0.00000001f : speed_Z;
+    
+    float cleanX = 0.0;
+    float cleanZ = 0.0;
+
+    int good_angle = 0;
+    int good_mag = 0;
+    
+    float angle = atan2(speed_Z, speed_X);
+    
+    float result_angle = angle * 180 / PI;
+    
+    float mag = sqrt(pow(speed_X, 2) + pow(speed_Z, 2));
+    
+    int quad_angle = (int) result_angle % 45;
+    
+    good_angle = (quad_angle >= 5.0f) && (quad_angle <= 40.0f);
+    good_mag = mag >= 0.1f;
+    
+    if (!good_angle)
+    {
+        int quad = result_angle / 45.0f;
+        
+        result_angle = (quad_angle < 5.0f) 
+        ? quad * 45.0f
+        : (quad == 7)
+        ? 0.0f
+        : (quad + 1.0f) * 45.0f;
+    }
+    
+    cleanX = (good_mag) ? mag * cos(result_angle * PI / 180) : 0.0f;
+    cleanZ = (good_mag) ? mag * sin(result_angle * PI / 180) : 0.0f;
+    
+    float totalSpeed = MAX_SPEED * sqrt(pow(cleanX, 2) + pow(cleanZ, 2)) / sqrt(2.0f);
 
 //    Serial.print("Total speed: ");
 //    Serial.print(totalSpeed);
 
     // create cartesian coordinate struct with coordinates from the x and z speeds
-    CartesianCoordinates baseCoords = {1.0f * speed_X, 1.0f * speed_Z};
+    CartesianCoordinates baseCoords = {1.0f * cleanX, 1.0f * cleanZ};
 
     // create a polar coordinate struct with the base cartesian coordinates
-    PolarCoordinates basePolar = {totalSpeed, atan2(speed_Z, speed_X)};
+    PolarCoordinates basePolar = {totalSpeed, atan2(cleanZ, cleanX)};
 
     // rotate the basePolar struct by 1/4*PI clockwise
     basePolar.theta = (basePolar.theta > (7/4) * PI) ? basePolar.theta - (2.0f * PI) + (PI/4.0f) : basePolar.theta + (PI/4.0f);
@@ -106,10 +140,10 @@ void MoveHorizontal(float speed_X, float speed_Z)
     // front left motor/back right motor: positive x axis
     // front right motor/back left motor: negative z axis
 
-    int fl = 1500 + (int)(rotatedCoords.x * MOD_FRONT_LEFT);
-    int fr = 1500 - (int)(rotatedCoords.z * MOD_FRONT_RIGHT);
-    int bl = 1500 + (int)(rotatedCoords.x * MOD_BACK_LEFT);
-    int br = 1500 - (int)(rotatedCoords.z * MOD_BACK_RIGHT);
+    int fl = 1500 + (int)(rotatedCoords.z * MOD_FRONT_LEFT);
+    int fr = 1500 - (int)(rotatedCoords.x * MOD_FRONT_RIGHT);
+    int bl = 1500 - (int)(rotatedCoords.x * MOD_BACK_LEFT);
+    int br = 1500 + (int)(rotatedCoords.z * MOD_BACK_RIGHT);
 
 //    Serial.print("All speeds: ");
 //    Serial.print(fl);
@@ -135,19 +169,19 @@ void MoveHorizontal(float speed_X, float speed_Z)
 
 void Rotate(float rotationSpeed)
 {
-    float totalSpeed = rotationSpeed * MAX_SPEED;
+    int totalSpeed = (int) (rotationSpeed * MAX_SPEED);
 
     // set front left motor
-    frontLeft.writeMicroseconds(1500 + (totalSpeed * MOD_FRONT_LEFT));
+    frontLeft.writeMicroseconds(1500 + (int) (totalSpeed * MOD_FRONT_LEFT));
 
     // set front right motor
-    frontRight.writeMicroseconds(1500 - (totalSpeed * MOD_FRONT_RIGHT));
+    frontRight.writeMicroseconds(1500 - (int) (totalSpeed * MOD_FRONT_RIGHT));
 
     // set back left motor
-    backLeft.writeMicroseconds(1500 + (totalSpeed * MOD_BACK_LEFT));
+    backLeft.writeMicroseconds(1500 + (int) (totalSpeed * MOD_BACK_LEFT));
 
     // set back right motor
-    backRight.writeMicroseconds(1500 - (totalSpeed * MOD_BACK_RIGHT));
+    backRight.writeMicroseconds(1500 - (int) (totalSpeed * MOD_BACK_RIGHT));
 }
 
 void SetClawState(int state)
