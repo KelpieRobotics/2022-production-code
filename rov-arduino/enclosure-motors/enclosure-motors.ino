@@ -43,7 +43,7 @@ Servo leftVertical;
 Servo rightVertical;
 
 // define data constants
-const float MAX_SPEED = 225.0f; // Max speed of motors, should be between 0 and 400
+const float MAX_SPEED = 350.0f; // Max speed of motors, should be between 0 and 400
 
 const float MOD_FRONT_LEFT = 1.0f;     // Modifier for front left motor, should be between 0 and 1
 const float MOD_FRONT_RIGHT = 1.0f;    // Modifier for front right motor, should be between 0 and 1
@@ -170,6 +170,7 @@ void MoveHorizontal(float speed_X, float speed_Z)
 void Rotate(float rotationSpeed)
 {
     int totalSpeed = (int) (rotationSpeed * MAX_SPEED);
+    //Serial.println(totalSpeed);
 
     // set front left motor
     frontLeft.writeMicroseconds(1500 + (int) (totalSpeed * MOD_FRONT_LEFT));
@@ -383,10 +384,13 @@ void loop()
             if (verticalLock == 0)
                 MoveVertical(speed_Y);
 
-            if (rotationLock == 0)
-                Rotate(speed_Rotation);
-
-            MoveHorizontal(speed_X, speed_Z);
+            if (rotationLock == 0 && (speed_Rotation > 0.2f || speed_Rotation < -0.2f))
+	    {
+		Rotate(speed_Rotation);
+		delay(1);
+	    }
+               
+            if (speed_Rotation <= 0.2f && speed_Rotation >= -0.2f) MoveHorizontal(speed_X, speed_Z);
             SetClawState(state_Claw);
         }
     }
@@ -453,8 +457,10 @@ void ParseCommands(String dataFromPi)
     speed_Y = speed_Y_String.toFloat();
     speed_Rotation = speed_Rotation_String.toFloat();
     state_Claw = R_trigger + L_trigger; // -1 = open, 0 = stopped, 1 = closed
-   Serial.println("OK");
 
+    float totalSpeedTemp = speed_Rotation * MAX_SPEED;
+
+    Serial.println(1500 + (int) (totalSpeedTemp * 1.05f));
 //    Serial.print(speed_X);
 //    Serial.print(speed_Y);
 //    Serial.print(speed_Z);
