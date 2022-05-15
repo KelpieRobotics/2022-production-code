@@ -43,14 +43,14 @@ Servo leftVertical;
 Servo rightVertical;
 
 // define data constants
-const float MAX_SPEED = 350.0f; // Max speed of motors, should be between 0 and 400
+const float MAX_SPEED = 300.0f; // Max speed of motors, should be between 0 and 400
 
-const float MOD_FRONT_LEFT = 1.0f;     // Modifier for front left motor, should be between 0 and 1
-const float MOD_FRONT_RIGHT = 1.0f;    // Modifier for front right motor, should be between 0 and 1
-const float MOD_BACK_LEFT = 1.0f;      // Modifier for back left motor, should be between 0 and 1
-const float MOD_BACK_RIGHT = 1.0f;     // Modifier for back right motor, should be between 0 and 1
-const float MOD_LEFT_VERTICAL = 1.0f;  // Modifier for left vertical motor, should be between 0 and 1
-const float MOD_RIGHT_VERTICAL = 1.0f; // Modifier for right vertical motor, should be between 0 and 1
+const float MOD_FRONT_LEFT = -0.75f;     // Modifier for front left motor, should be between 0 and 1
+const float MOD_FRONT_RIGHT = -1.0f;    // Modifier for front right motor, should be between 0 and 1
+const float MOD_BACK_LEFT = -1.0f;      // Modifier for back left motor, should be between 0 and 1
+const float MOD_BACK_RIGHT = -1.0f;     // Modifier for back right motor, should be between 0 and 1
+const float MOD_LEFT_VERTICAL = -1.0f;  // Modifier for left vertical motor, should be between 0 and 1
+const float MOD_RIGHT_VERTICAL = -1.0f; // Modifier for right vertical motor, should be between 0 and 1
 
 const int DEBUG_MODE = 0; // Debug mode, 0 = regular, 1 = only Y move, 2 = only X move, 3 = only Z move, 4 = only claw move
 

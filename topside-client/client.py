@@ -81,7 +81,7 @@ class main:
         logging.info("Starting DATA thread")
         lastDataCap = self.current_milli_time()
         while True:
-            if self.runThreading  and self.sendComPortCommands and(self.current_milli_time() - lastDataCap >= 1000):
+            if self.runThreading  and self.sendComPortCommands and(self.current_milli_time() - lastDataCap >= 50):
                 # Fetch Data from the sensor server thread
                 returnedData = self.tcp_sensors.sendData("SEN")
                 # Parse Data
