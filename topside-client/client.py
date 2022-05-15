@@ -4,6 +4,7 @@ from dataLogger import dataLogger
 import threading
 import logging
 import time
+from datetime import datetime
 
 class main:
     def __init__(self, serverIP, serverPort) -> None:
@@ -92,7 +93,7 @@ class main:
                 returnedData = self.tcp_sensors.sendData("SEN")
                 # Parse Data
                 returnedDataCSV = returnedData.replace("\t",",")
-                returnedDataCSV = f"{self.current_milli_time()},{returnedDataCSV}"
+                returnedDataCSV = f"{datetime.now()},{returnedDataCSV}"
                 returnedDataList = returnedDataCSV.split(",")
                 print(returnedDataList)
                 self.dataSave.writeCSVString(returnedDataCSV)
