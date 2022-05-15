@@ -1,5 +1,8 @@
+# Custom
 *.log
-
+topside-client/data_logs/*.csv
+#VS code...
+.vscode
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -13,12 +13,14 @@ class main:
         self.sensorPort = serverPort + 1
         self.runThreading = True
         self.sendComPortCommands = False
+        print("Starting...")
         logging.debug("Initializing Main - IP {self.serverIP}, MotorTCP: {self.motorPort}, SensorTCP: {self.sensorPort}")
         # Objects 
         self.gamePad = XboxController()
         self.tcp_motors = None
         self.tcp_sensors = None
         self.dataSave = dataLogger(["Time(s)","Humidity(%)","Enclosure Temperature(C)","Leak","Vin(Vrms)","Vout(Vrms)","Current Out(A)", "PMBus Temperature(C)", "Power Out(W)"])
+        print("READY")
 
 
 
@@ -58,7 +60,11 @@ class main:
 
                 # COM Port is active
                 if self.sendComPortCommands:
-                    formmatedData = f"{gamePadSticks[1]},{gamePadSticks[2]}\t{gamePadSticks[4]},{gamePadSticks[5]}\t{gamePadTriggers[0]},{gamePadTriggers[1]},{gamePadTriggers[2]},{gamePadTriggers[3]}"
+                    # Use the following format if using both joysticks
+                    formmatedData = f"S\t{gamePadSticks[1]},{gamePadSticks[2]}\t{gamePadSticks[4]},{gamePadSticks[5]}\t{gamePadTriggers[0]},{gamePadTriggers[1]},{gamePadTriggers[2]},{gamePadTriggers[3]}"
+                    # Use the following format if using dpad and right joystick
+                    # formmatedData = f"D\t{gamePadButtons[6]},{gamePadButtons[7]}\t{gamePadSticks[4]},{gamePadSticks[5]}\t{gamePadTriggers[0]},{gamePadTriggers[1]},{gamePadTriggers[2]},{gamePadTriggers[3]}"
+
                     print(self.tcp_motors.sendData("MOT"+formmatedData))
                 # SELECT + START to stop threading
                 if gamePadButtons[4] == 1 and gamePadButtons[5]== 1:
@@ -67,8 +73,8 @@ class main:
 
 
 
-                # TODO: TEMP PS4 O button
-                if gamePadButtons[1] == 1:
+                # Start Button to start sending data to arduinos
+                if gamePadButtons[3] == 1:
                     print("START COMPORT")
                     self.sendComPortCommands = True
 
