@@ -55,13 +55,20 @@ const float MOD_RIGHT_VERTICAL = -1.0f; // Modifier for right vertical motor, sh
 const int DEBUG_MODE = 0; // Debug mode, 0 = regular, 1 = only Y move, 2 = only X move, 3 = only Z move, 4 = only claw move
 
 // define data globals
-float speed_X = 0.0f;        // Stores speed of X axis
-float speed_Z = 0.0f;        // Stores speed of Z axis
+int x = 0;                   // Stores horizontal dpad value
+int z = 0;                   // Stores vertical dpad value
+float speed_X = 0.0f;          // Stores speed of X axis
+float speed_Z = 0.0f;          // Stores speed of Z axis
 float speed_Y = 0.0f;        // Stores speed of Y axis
 float speed_Rotation = 0.0f; // Stores speed of Rotation
 int state_Claw = 0;          // Stores state of Claw, 0 = open, 1 = closed
 int verticalLock = 0;        // Stores vertical movement lock, 0 = unlocked, 1 = locked
 int rotationLock = 0;        // Stores rotation lock, 0 = unlocked, 1 = locked
+char stick_or_pad;
+int speedMod = 5;
+
+int last_top = 0;             // Stores last top value
+int last_bottom = 0;          // Stores last bottom value
 
 int time = 0;
 
@@ -78,6 +85,7 @@ void MoveVertical(float speed_Y)
     rightVertical.writeMicroseconds(rv);
 }
 
+// defunct now
 void MoveHorizontal(float speed_X, float speed_Z)
 {
     float x_norm = (speed_X == 0.0f) ? 0.00000001f : speed_X;
@@ -164,6 +172,87 @@ void MoveHorizontal(float speed_X, float speed_Z)
     backLeft.writeMicroseconds(bl);
 
     // set back right motor
+    backRight.writeMicroseconds(br);
+}
+
+void MoveUsingDPad(int z, int x, int speedMod)
+{
+    float speedModFloat = ((float) speedMod / 10.0f) * MAX_SPEED;
+
+    float totalSpeedX = speedModFloat;
+    float totalSpeedZ = speedModFloat;
+
+    // hard-coding these commands is kinda painful and I don't like the idea of doing it, but we kinda have 
+    int cartesianToNumpad = (5) + x + (z * 3);
+
+    switch (cartesianToNumpad)
+    {
+    case 1:
+        totalSpeedX *= -1.0f;
+        totalSpeedZ *=  0.0f;
+        break;
+    case 2:
+        totalSpeedX *= -1.0f;
+        totalSpeedZ *= -1.0f;
+        break;
+    case 3:
+        totalSpeedX *=  0.0f;
+        totalSpeedZ *= -1.0f;
+        break;
+    case 4:
+        totalSpeedX *= -1.0f;
+        totalSpeedZ *=  0.0f;
+        break;
+    case 5:
+        totalSpeedX *=  0.0f;
+        totalSpeedZ *=  0.0f;
+        break;
+    case 6:
+        totalSpeedX *=  1.0f;
+        totalSpeedZ *= -1.0f;
+        break;
+    case 7:
+        totalSpeedX *=  0.0f;
+        totalSpeedZ *=  1.0f;
+        break;
+    case 8:
+        totalSpeedX *=  1.0f;
+        totalSpeedZ *=  1.0f;
+        break;
+    case 9:
+        totalSpeedX *=  1.0f;
+        totalSpeedZ *=  0.0f;
+        break;
+    }
+
+    int fr = 1500 + (int)(totalSpeedX * MOD_FRONT_RIGHT);
+    int bl = 1500 + (int)(totalSpeedX * MOD_BACK_LEFT);
+
+    int fl = 1500 + (int)(totalSpeedZ * MOD_FRONT_LEFT);
+    int br = 1500 + (int)(totalSpeedZ * MOD_BACK_RIGHT);
+
+    frontRight.writeMicroseconds(fr);
+    backLeft.writeMicroseconds(bl);
+
+    frontLeft.writeMicroseconds(fl);
+    backRight.writeMicroseconds(br);
+}
+
+void MoveWithNoOffset(int speed_X, int speed_Z)
+{
+    float totalSpeedX = speed_X * MAX_SPEED;
+    float totalSpeedZ = speed_Z * MAX_SPEED;
+
+    int fr = 1500 + (int)(totalSpeedZ * MOD_FRONT_RIGHT);
+    int bl = 1500 + (int)(totalSpeedZ * MOD_BACK_LEFT);
+
+    int fl = 1500 + (int)(totalSpeedX * MOD_FRONT_LEFT);
+    int br = 1500 + (int)(totalSpeedX * MOD_BACK_RIGHT);
+
+    frontRight.writeMicroseconds(fr);
+    backLeft.writeMicroseconds(bl);
+
+    frontLeft.writeMicroseconds(fl);
     backRight.writeMicroseconds(br);
 }
 
@@ -390,7 +479,20 @@ void loop()
 		delay(1);
 	    }
                
-            if (speed_Rotation <= 0.2f && speed_Rotation >= -0.2f) MoveHorizontal(speed_X, speed_Z);
+            if (speed_Rotation <= 0.2f && speed_Rotation >= -0.2f) 
+            {
+                switch (stick_or_pad)
+                {
+                    case 'S':
+                        MoveWithNoOffset(speed_X, speed_Z);
+                        break;
+                    case 'D':
+                        MoveUsingDPad(z, x, speedMod);
+                        break;
+                    default:
+                        break;
+                }
+            }
             SetClawState(state_Claw);
         }
     }
@@ -406,63 +508,104 @@ void ParseCommands(String dataFromPi)
         return;
     }
 
-    // dataFromPi, if not "MOTOR", will come in the format "firstElement\tsecondElement\tthirdElement"
+    // this array is as follows: [0] = movement inputs, [1] = right stick, [2] = claw states + buttons
+    String dataFromPiArray[4];
+    String tmp_str;
 
-    // split at tabs into a string array of 3 elements
-    String dataFromPiArray[3];
+    // split the data into the three elements
+    dataFromPiArray[3] = dataFromPi.substring(0, dataFromPi.indexOf('\t'));
+    tmp_str = dataFromPi.substring(dataFromPi.indexOf('\t') + 1);
     dataFromPiArray[0] = dataFromPi.substring(0, dataFromPi.indexOf('\t'));
-    dataFromPiArray[1] = dataFromPi.substring(dataFromPi.indexOf('\t') + 1, dataFromPi.lastIndexOf('\t'));
-    dataFromPiArray[2] = dataFromPi.substring(dataFromPi.lastIndexOf('\t') + 1);
-    
-    // the first element will come in the format of "speed_X, speed_Z"
-    // the second element will come in the format of "speed_Rotation, speed_Y"
-    // the third element will come in the format of "L_bumper, L_trigger, R_bumper, R_trigger"
+    tmp_str = dataFromPi.substring(dataFromPi.indexOf('\t') + 1);
+    dataFromPiArray[1] = dataFromPi.substring(0, dataFromPi.indexOf('\t'));
+    tmp_str = dataFromPi.substring(dataFromPi.indexOf('\t') + 1);
+    dataFromPiArray[2] = dataFromPi.substring(0, dataFromPi.indexOf('\t'));
 
-    String speed_X_String = dataFromPiArray[0].substring(0, dataFromPiArray[0].indexOf(','));
-    String speed_Z_String = dataFromPiArray[0].substring(dataFromPiArray[0].indexOf(',') + 1);
+    // parse the first element
+    tmp_str = dataFromPiArray[0];
+    String x_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String z_String = tmp_str.substring(0, tmp_str.indexOf(','));
 
     // parse the second element
-    String speed_Rotation_String = dataFromPiArray[1].substring(0, dataFromPiArray[1].indexOf(','));
-    String speed_Y_String = dataFromPiArray[1].substring(dataFromPiArray[1].indexOf(',') + 1);
-
+    tmp_str = dataFromPiArray[1];
+    String speed_Rotation_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String speed_Y_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    
     // parse the third element
-    String tmp_str = dataFromPiArray[2];
-
-    String L_bumper_String = tmp_str.substring(0, tmp_str.indexOf(','));
-
-    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    tmp_str = dataFromPiArray[2];
     String L_trigger_String = tmp_str.substring(0, tmp_str.indexOf(','));
-
     tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
-    String R_bumper_String = tmp_str.substring(0, tmp_str.indexOf(','));
-
+    String R_trigger_String = tmp_str.substring(0, tmp_str.indexOf(','));
     tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
-    String R_trigger_String = tmp_str;
+    String L_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String R_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String top_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String bottom_button_String = tmp_str;
 
-    // lock state variables
-    int R_bumper = R_bumper_String.toInt();
+    stick_or_pad = dataFromPiArray[3].charAt(0);
+
+    // convert the strings to ints and floats
+
+    switch (stick_or_pad)
+    {
+
+    case 'S':
+        // stick
+        speed_X = x_String.toFloat();
+        speed_Z = z_String.toFloat();
+        break;
+
+    case 'D':
+        // dpad
+        x = x_String.toInt();
+        z = -1 * z_String.toInt();
+        break;
+
+    default:
+        break;
+
+    }
+
+    speed_Rotation = speed_Rotation_String.toInt();
+    speed_Y = speed_Y_String.toInt();
+
+    int L_trigger = L_trigger_String.toFloat() >= 0.5f ? 1 : 0;
     int R_trigger = R_trigger_String.toFloat() >= 0.5f ? 1 : 0;
 
-    // claw state variables
-    int L_bumper = L_bumper_String.toInt();
-    int L_trigger = L_trigger_String.toFloat() >= 0.5f ? -1 : 0;
+    state_Claw = R_trigger + L_trigger;
 
-    // set the lock states based on the bumper values
-    verticalLock = R_bumper;
-    rotationLock = L_bumper;
+    int L_button = L_button_String.toInt();
+    int R_button = R_button_String.toInt();
 
-    // set the variables to the new values
-    speed_X = speed_X_String.toFloat();
-    speed_Z = speed_Z_String.toFloat();
-    speed_Y = speed_Y_String.toFloat();
-    speed_Rotation = speed_Rotation_String.toFloat();
-    state_Claw = R_trigger + L_trigger; // -1 = open, 0 = stopped, 1 = closed
+    verticalLock = R_button;
+    rotationLock = L_button;
 
-    float totalSpeedTemp = speed_Rotation * MAX_SPEED;
+    int top_button = top_button_String.toInt();         // x on XBOX
+    int bottom_button = bottom_button_String.toInt();   // a on XBOX
 
-    Serial.println(1500 + (int) (totalSpeedTemp * 1.05f));
-//    Serial.print(speed_X);
-//    Serial.print(speed_Y);
-//    Serial.print(speed_Z);
-//    Serial.print(state_Claw);
+    if (top_button == 1 && last_top == 0) // rising edge
+    {
+        if (speedMod < 10)
+        {
+            speedMod++;
+        }
+    }
+    else if (bottom_button == 1 && last_bottom == 0) 
+    {
+        if (speedMod > 0)
+        {
+            speedMod--;
+        }
+    }
+
+    last_top = top_button;
+    last_bottom = bottom_button;
+
+    Serial.println(speedMod);
 }
