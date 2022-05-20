@@ -43,11 +43,11 @@ Servo leftVertical;
 Servo rightVertical;
 
 // define data constants
-const float MAX_SPEED = 300.0f; // Max speed of motors, should be between 0 and 400
+const float MAX_SPEED = 200.0f; // Max speed of motors, should be between 0 and 400
 
-const float MOD_FRONT_LEFT = -0.75f;     // Modifier for front left motor, should be between 0 and 1
-const float MOD_FRONT_RIGHT = -1.0f;    // Modifier for front right motor, should be between 0 and 1
-const float MOD_BACK_LEFT = -1.0f;      // Modifier for back left motor, should be between 0 and 1
+const float MOD_FRONT_LEFT = -1.0f;     // Modifier for front left motor, should be between 0 and 1
+const float MOD_FRONT_RIGHT = 1.0f;    // Modifier for front right motor, should be between 0 and 1
+const float MOD_BACK_LEFT = -0.80f;      // Modifier for back left motor, should be between 0 and 1
 const float MOD_BACK_RIGHT = -1.0f;     // Modifier for back right motor, should be between 0 and 1
 const float MOD_LEFT_VERTICAL = -1.0f;  // Modifier for left vertical motor, should be between 0 and 1
 const float MOD_RIGHT_VERTICAL = -1.0f; // Modifier for right vertical motor, should be between 0 and 1
@@ -65,24 +65,44 @@ int state_Claw = 0;          // Stores state of Claw, 0 = open, 1 = closed
 int verticalLock = 0;        // Stores vertical movement lock, 0 = unlocked, 1 = locked
 int rotationLock = 0;        // Stores rotation lock, 0 = unlocked, 1 = locked
 char stick_or_pad;
-int speedMod = 5;
+int speedMod = 10;
 
 int last_top = 0;             // Stores last top value
 int last_bottom = 0;          // Stores last bottom value
 
 int time = 0;
 
+short fl_buffer[64] = {};
+short fr_buffer[64] = {};
+short bl_buffer[64] = {};
+short br_buffer[64] = {};
+short vl_buffer[64] = {};
+short vr_buffer[64] = {};
+
+short fl;
+short fr;
+short bl;
+short br;
+short vl;
+short vr;
+
+int fl_sum;
+int fr_sum;
+int bl_sum;
+int br_sum;
+int vl_sum;
+in6/33333333333333333333333333t vr_sum;
+
+int counter = 0;
+
 void MoveVertical(float speed_Y)
 {
     float totalSpeed = speed_Y * MAX_SPEED;
 
     // set left vertical motor
-    int lv = 1500 + (int)(totalSpeed * MOD_LEFT_VERTICAL);
-    leftVertical.writeMicroseconds(lv);
-
+    vl = 1500 + (int)(totalSpeed * MOD_LEFT_VERTICAL);
     // set right vertical motor
-    int rv = 1500 + (int)(totalSpeed * MOD_RIGHT_VERTICAL);
-    rightVertical.writeMicroseconds(rv);
+    vr = 1500 + (int)(totalSpeed * MOD_RIGHT_VERTICAL);
 }
 
 // defunct now
@@ -200,7 +220,7 @@ void MoveUsingDPad(int z, int x, int speedMod)
         totalSpeedZ *= -1.0f;
         break;
     case 4:
-        totalSpeedX *= -1.0f;
+        totalSpeedX *=  1.0f;
         totalSpeedZ *=  0.0f;
         break;
     case 5:
@@ -208,8 +228,8 @@ void MoveUsingDPad(int z, int x, int speedMod)
         totalSpeedZ *=  0.0f;
         break;
     case 6:
-        totalSpeedX *=  1.0f;
-        totalSpeedZ *= -1.0f;
+        totalSpeedX *= -1.0f;
+        totalSpeedZ *=  1.0f;
         break;
     case 7:
         totalSpeedX *=  0.0f;
@@ -225,17 +245,10 @@ void MoveUsingDPad(int z, int x, int speedMod)
         break;
     }
 
-    int fr = 1500 + (int)(totalSpeedX * MOD_FRONT_RIGHT);
-    int bl = 1500 + (int)(totalSpeedX * MOD_BACK_LEFT);
-
-    int fl = 1500 + (int)(totalSpeedZ * MOD_FRONT_LEFT);
-    int br = 1500 + (int)(totalSpeedZ * MOD_BACK_RIGHT);
-
-    frontRight.writeMicroseconds(fr);
-    backLeft.writeMicroseconds(bl);
-
-    frontLeft.writeMicroseconds(fl);
-    backRight.writeMicroseconds(br);
+    fr = 1500 + (int)(totalSpeedX * MOD_FRONT_RIGHT);
+    bl = 1500 + (int)(totalSpeedX * MOD_BACK_LEFT);
+    fl = 1500 + (int)(totalSpeedZ * MOD_FRONT_LEFT);
+    br = 1500 + (int)(totalSpeedZ * MOD_BACK_RIGHT);
 }
 
 void MoveWithNoOffset(int speed_X, int speed_Z)
@@ -243,17 +256,11 @@ void MoveWithNoOffset(int speed_X, int speed_Z)
     float totalSpeedX = speed_X * MAX_SPEED;
     float totalSpeedZ = speed_Z * MAX_SPEED;
 
-    int fr = 1500 + (int)(totalSpeedZ * MOD_FRONT_RIGHT);
-    int bl = 1500 + (int)(totalSpeedZ * MOD_BACK_LEFT);
+    fr = 1500 + (int)(totalSpeedZ * MOD_FRONT_RIGHT);
+    bl = 1500 + (int)(totalSpeedZ * MOD_BACK_LEFT);
 
-    int fl = 1500 + (int)(totalSpeedX * MOD_FRONT_LEFT);
-    int br = 1500 + (int)(totalSpeedX * MOD_BACK_RIGHT);
-
-    frontRight.writeMicroseconds(fr);
-    backLeft.writeMicroseconds(bl);
-
-    frontLeft.writeMicroseconds(fl);
-    backRight.writeMicroseconds(br);
+    fl = 1500 + (int)(totalSpeedX * MOD_FRONT_LEFT);
+    br = 1500 + (int)(totalSpeedX * MOD_BACK_RIGHT);
 }
 
 void Rotate(float rotationSpeed)
@@ -262,16 +269,32 @@ void Rotate(float rotationSpeed)
     //Serial.println(totalSpeed);
 
     // set front left motor
-    frontLeft.writeMicroseconds(1500 + (int) (totalSpeed * MOD_FRONT_LEFT));
+    fl = (1500 + (int) (totalSpeed * MOD_FRONT_LEFT));
 
     // set front right motor
-    frontRight.writeMicroseconds(1500 - (int) (totalSpeed * MOD_FRONT_RIGHT));
+    fr = (1500 - (int) (totalSpeed * MOD_FRONT_RIGHT));
 
     // set back left motor
-    backLeft.writeMicroseconds(1500 + (int) (totalSpeed * MOD_BACK_LEFT));
+    bl = (1500 + (int) (totalSpeed * MOD_BACK_LEFT));
 
     // set back right motor
-    backRight.writeMicroseconds(1500 - (int) (totalSpeed * MOD_BACK_RIGHT));
+    br = (1500 - (int) (totalSpeed * MOD_BACK_RIGHT));
+}
+
+void RotateDigital(float rotationSpeed)
+{
+    int _rotSpeed = (rotationSpeed > 0.4f) ? 200 : (rotationSpeed < -0.4f) ? -200 : 0;
+
+    fl = (1500 + (int) (_rotSpeed  * MOD_FRONT_LEFT));
+
+    // set front right motor
+    fr = (1500 - (int) (_rotSpeed  * MOD_FRONT_RIGHT));
+
+    // set back left motor
+    bl = (1500 + (int) (_rotSpeed  * MOD_BACK_LEFT));
+
+    // set back right motor
+    br = (1500 - (int) (_rotSpeed  * MOD_BACK_RIGHT));
 }
 
 void SetClawState(int state)
@@ -305,7 +328,17 @@ void setup()
     // initialize servos
     pinMode(PIN__CLAW_1, OUTPUT);
     pinMode(PIN__CLAW_2, OUTPUT);
-    
+
+    for (int i = 0; i < 64; i ++)
+    {
+	fl_buffer[i] = 1500;
+	fr_buffer[i] = 1500;
+	bl_buffer[i] = 1500;
+	br_buffer[i] = 1500;
+	vl_buffer[i] = 1500;
+	vr_buffer[i] = 1500;
+    }
+  
     frontLeft.attach(PIN__FRONT_LEFT);
     frontRight.attach(PIN__FRONT_RIGHT);
     backLeft.attach(PIN__BACK_LEFT);
@@ -473,13 +506,13 @@ void loop()
             if (verticalLock == 0)
                 MoveVertical(speed_Y);
 
-            if (rotationLock == 0 && (speed_Rotation > 0.2f || speed_Rotation < -0.2f))
+            if (rotationLock == 0 && (speed_Rotation > 0.4f || speed_Rotation < -0.4f))
 	    {
-		Rotate(speed_Rotation);
+		RotateDigital(speed_Rotation);
 		delay(1);
 	    }
                
-            if (speed_Rotation <= 0.2f && speed_Rotation >= -0.2f) 
+            if (speed_Rotation <= 0.4f && speed_Rotation >= -0.4f) 
             {
                 switch (stick_or_pad)
                 {
@@ -494,7 +527,47 @@ void loop()
                 }
             }
             SetClawState(state_Claw);
-        }
+
+            fl_buffer[counter] = fl;
+	    fr_buffer[counter] = fr;
+	    bl_buffer[counter] = bl;
+	    br_buffer[counter] = br;
+	    vl_buffer[counter] = vl;
+	    vr_buffer[counter] = vr;
+
+	    counter = (counter + 1) % 255;
+
+	    fl_sum = 0;
+            fr_sum = 0;
+	    bl_sum = 0;
+	    br_sum = 0;
+	    vl_sum = 0;
+	    vr_sum = 0;
+
+	    for (int i = 0; i < 64; i++)
+	    {
+		fl_sum += fl_buffer[i];
+		fr_sum += fr_buffer[i];
+		bl_sum += bl_buffer[i];
+		br_sum += br_buffer[i];
+		vl_sum += vl_buffer[i];
+		vr_sum += vr_buffer[i];
+	    }
+
+	    fl_sum /= 64;
+	    fr_sum /= 64;
+	    bl_sum /= 64;
+	    br_sum /= 64;
+	    vl_sum /= 64;
+	    vr_sum /= 64;
+
+	    frontLeft.writeMicroseconds(fl_sum);
+	    frontRight.writeMicroseconds(fr_sum);
+	    backLeft.writeMicroseconds(bl_sum);
+	    backRight.writeMicroseconds(br_sum);
+	    leftVertical.writeMicroseconds(vl_sum);
+	    rightVertical.writeMicroseconds(vr_sum);
+	}
     }
 
     delay(1);
@@ -510,16 +583,16 @@ void ParseCommands(String dataFromPi)
 
     // this array is as follows: [0] = movement inputs, [1] = right stick, [2] = claw states + buttons
     String dataFromPiArray[4];
-    String tmp_str;
+    String tmp_str = dataFromPi;
 
     // split the data into the three elements
-    dataFromPiArray[3] = dataFromPi.substring(0, dataFromPi.indexOf('\t'));
-    tmp_str = dataFromPi.substring(dataFromPi.indexOf('\t') + 1);
-    dataFromPiArray[0] = dataFromPi.substring(0, dataFromPi.indexOf('\t'));
-    tmp_str = dataFromPi.substring(dataFromPi.indexOf('\t') + 1);
-    dataFromPiArray[1] = dataFromPi.substring(0, dataFromPi.indexOf('\t'));
-    tmp_str = dataFromPi.substring(dataFromPi.indexOf('\t') + 1);
-    dataFromPiArray[2] = dataFromPi.substring(0, dataFromPi.indexOf('\t'));
+    dataFromPiArray[3] = tmp_str.substring(0, tmp_str.indexOf('\t'));
+    tmp_str = tmp_str.substring(tmp_str.indexOf('\t') + 1);
+    dataFromPiArray[0] = tmp_str.substring(0, tmp_str.indexOf('\t'));
+    tmp_str = tmp_str.substring(tmp_str.indexOf('\t') + 1);
+    dataFromPiArray[1] = tmp_str.substring(0, tmp_str.indexOf('\t'));
+    tmp_str = tmp_str.substring(tmp_str.indexOf('\t') + 1);
+    dataFromPiArray[2] = tmp_str.substring(0, tmp_str.indexOf('\t'));
 
     // parse the first element
     tmp_str = dataFromPiArray[0];
@@ -536,13 +609,13 @@ void ParseCommands(String dataFromPi)
     
     // parse the third element
     tmp_str = dataFromPiArray[2];
-    String L_trigger_String = tmp_str.substring(0, tmp_str.indexOf(','));
-    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
-    String R_trigger_String = tmp_str.substring(0, tmp_str.indexOf(','));
-    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
     String L_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
     tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
     String R_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String L_trigger_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String R_trigger_String = tmp_str.substring(0, tmp_str.indexOf(','));
     tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
     String top_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
     tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
@@ -572,10 +645,10 @@ void ParseCommands(String dataFromPi)
 
     }
 
-    speed_Rotation = speed_Rotation_String.toInt();
-    speed_Y = speed_Y_String.toInt();
+    speed_Rotation = speed_Rotation_String.toFloat();
+    speed_Y = speed_Y_String.toFloat();
 
-    int L_trigger = L_trigger_String.toFloat() >= 0.5f ? 1 : 0;
+    int L_trigger = L_trigger_String.toFloat() >= 0.5f ? -1 : 0;
     int R_trigger = R_trigger_String.toFloat() >= 0.5f ? 1 : 0;
 
     state_Claw = R_trigger + L_trigger;
@@ -607,5 +680,5 @@ void ParseCommands(String dataFromPi)
     last_top = top_button;
     last_bottom = bottom_button;
 
-    Serial.println(speedMod);
+    Serial.println(state_Claw);
 }
