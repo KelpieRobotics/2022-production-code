@@ -365,6 +365,187 @@ void setup()
     lcd.clear();
 }
 
+void ParseCommands(String dataFromPi)
+{
+    if (dataFromPi == "TYPE") // if the Pi polled for type rather than sending a motor call, reply with "MOTOR" and return
+    {
+        Serial.println("MOTOR");
+        return;
+    }
+
+    // this array is as follows: [0] = movement inputs, [1] = right stick, [2] = claw states + buttons
+    String dataFromPiArray[4];
+    String tmp_str = dataFromPi;
+
+    // split the data into the three elements
+    dataFromPiArray[3] = tmp_str.substring(0, tmp_str.indexOf('\t'));
+    tmp_str = tmp_str.substring(tmp_str.indexOf('\t') + 1);
+    dataFromPiArray[0] = tmp_str.substring(0, tmp_str.indexOf('\t'));
+    tmp_str = tmp_str.substring(tmp_str.indexOf('\t') + 1);
+    dataFromPiArray[1] = tmp_str.substring(0, tmp_str.indexOf('\t'));
+    tmp_str = tmp_str.substring(tmp_str.indexOf('\t') + 1);
+    dataFromPiArray[2] = tmp_str.substring(0, tmp_str.indexOf('\t'));
+
+    // parse the first element
+    tmp_str = dataFromPiArray[0];
+    String x_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String z_String = tmp_str.substring(0, tmp_str.indexOf(','));
+
+    // parse the second element
+    tmp_str = dataFromPiArray[1];
+    String speed_Rotation_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String speed_Y_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+
+    // parse the third element
+    tmp_str = dataFromPiArray[2];
+    String L_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String L_trigger_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String R_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String R_trigger_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String top_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
+    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
+    String bottom_button_String = tmp_str;
+
+    stick_or_pad = dataFromPiArray[3].charAt(0);
+
+    // convert the strings to ints and floats
+
+    switch (stick_or_pad)
+    {
+
+    case 'S':
+        // stick
+        speed_X = x_String.toFloat();
+        speed_Z = z_String.toFloat();
+        break;
+
+    case 'D':
+        // dpad
+        x = -1 * x_String.toInt();
+        z = -1 * z_String.toInt();
+        break;
+
+    default:
+        break;
+    }
+
+    speed_Rotation = speed_Rotation_String.toFloat();
+    speed_Y = speed_Y_String.toFloat();
+
+    int L_trigger = L_trigger_String.toFloat() >= 0.5f ? -1 : 0;
+    int R_trigger = R_trigger_String.toFloat() >= 0.5f ? 1 : 0;
+
+    state_Claw = R_trigger + L_trigger;
+
+    int L_button = L_button_String.toInt();
+    int R_button = R_button_String.toInt();
+
+    verticalLock = R_button;
+    rotationLock = L_button;
+
+    int top_button = top_button_String.toInt();       // x on XBOX
+    int bottom_button = bottom_button_String.toInt(); // a on XBOX
+
+    if (top_button == 1 && last_top == 0) // rising edge
+    {
+        if (speedMod < 10)
+        {
+            speedMod++;
+        }
+    }
+    else if (bottom_button == 1 && last_bottom == 0)
+    {
+        if (speedMod > 0)
+        {
+            speedMod--;
+        }
+    }
+
+    last_top = top_button;
+    last_bottom = bottom_button;
+
+    Serial.println(state_Claw);
+}
+
+void mainLoop()
+{
+    // vertical moves if not locked...
+    if (verticalLock == 0)
+        MoveVertical(speed_Y);
+
+    // then rotation, then movement (note if there is rotation, movement is not done, and rotation lock is checked AFTER the rotation speed check)
+    if ((speed_Rotation > 0.4f || speed_Rotation < -0.4f))
+    {
+        if (rotationLock == 0)
+            RotateDigital(speed_Rotation);
+    }
+
+    else
+
+    {
+        switch (stick_or_pad)
+        {
+        case 'S':
+            MoveWithNoOffset(speed_X, speed_Z);
+            break;
+        case 'D':
+            MoveUsingDPad(z, x, speedMod);
+            break;
+        default:
+            break;
+        }
+    }
+    // then adjust the claw as needed
+    SetClawState(state_Claw);
+    // movement values are applied to the buffer, if the value is within the threshold
+    fl_buffer[counter] = (fl >= 1100 && fl <= 1900) ? fl : 1500;
+    fr_buffer[counter] = (fr >= 1100 && fr <= 1900) ? fr : 1500;
+    bl_buffer[counter] = (bl >= 1100 && bl <= 1900) ? bl : 1500;
+    br_buffer[counter] = (br >= 1100 && br <= 1900) ? br : 1500;
+    vl_buffer[counter] = (vl >= 1100 && vl <= 1900) ? vl : 1500;
+    vr_buffer[counter] = (vr >= 1100 && vr <= 1900) ? vr : 1500;
+    // the buffer is cyclical; the counter is incremented and wrapped around to 0 when it reaches the end of the buffer
+    counter = (counter + 1) % 64;
+
+    fl_sum = 0;
+    fr_sum = 0;
+    bl_sum = 0;
+    br_sum = 0;
+    vl_sum = 0;
+    vr_sum = 0;
+    // a rolling average is calculated by adding the values in the buffer and dividing by the number of values in the buffer
+    for (int i = 0; i < 64; i++)
+    {
+        fl_sum += fl_buffer[i];
+        fr_sum += fr_buffer[i];
+        bl_sum += bl_buffer[i];
+        br_sum += br_buffer[i];
+        vl_sum += vl_buffer[i];
+        vr_sum += vr_buffer[i];
+    }
+
+    fl_sum /= 64;
+    fr_sum /= 64;
+    bl_sum /= 64;
+    br_sum /= 64;
+    vl_sum /= 64;
+    vr_sum /= 64;
+    // finally, this rolling average speed is applied to the motors
+    frontLeft.writeMicroseconds((fl_sum >= 1100 && fl_sum <= 1900) ? fl_sum : 1500);
+    frontRight.writeMicroseconds((fr_sum >= 1100 && fr_sum <= 1900) ? fr_sum : 1500);
+    backLeft.writeMicroseconds((bl_sum >= 1100 && bl_sum <= 1900) ? bl_sum : 1500);
+    backRight.writeMicroseconds((br_sum >= 1100 && br_sum <= 1900) ? br_sum : 1500);
+    leftVertical.writeMicroseconds((vl_sum >= 1100 && vl_sum <= 1900) ? vl_sum : 1500);
+    rightVertical.writeMicroseconds((vr_sum >= 1100 && vr_sum <= 1900) ? vr_sum : 1500);
+}
+
 void loop()
 {
     // read in the command and set variables accordingly if Serial has values
@@ -502,182 +683,8 @@ void loop()
         }
         else
         {
-            // call commands if locks not set
-            if (verticalLock == 0)
-                MoveVertical(speed_Y);
-
-            if (rotationLock == 0 && (speed_Rotation > 0.4f || speed_Rotation < -0.4f))
-            {
-                RotateDigital(speed_Rotation);
-                delay(1);
-            }
-
-            if (speed_Rotation <= 0.4f && speed_Rotation >= -0.4f)
-            {
-                switch (stick_or_pad)
-                {
-                case 'S':
-                    MoveWithNoOffset(speed_X, speed_Z);
-                    break;
-                case 'D':
-                    MoveUsingDPad(z, x, speedMod);
-                    break;
-                default:
-                    break;
-                }
-            }
-            SetClawState(state_Claw);
-
-            fl_buffer[counter] = (fl >= 1100 && fl <= 1900) ? fl : 1500;
-            fr_buffer[counter] = (fr >= 1100 && fr <= 1900) ? fr : 1500;
-            bl_buffer[counter] = (bl >= 1100 && bl <= 1900) ? bl : 1500;
-            br_buffer[counter] = (br >= 1100 && br <= 1900) ? br : 1500;
-            vl_buffer[counter] = (vl >= 1100 && vl <= 1900) ? vl : 1500;
-            vr_buffer[counter] = (vr >= 1100 && vr <= 1900) ? vr : 1500;
-
-            counter = (counter + 1) % 64;
-
-            fl_sum = 0;
-            fr_sum = 0;
-            bl_sum = 0;
-            br_sum = 0;
-            vl_sum = 0;
-            vr_sum = 0;
-
-            for (int i = 0; i < 64; i++)
-            {
-                fl_sum += fl_buffer[i];
-                fr_sum += fr_buffer[i];
-                bl_sum += bl_buffer[i];
-                br_sum += br_buffer[i];
-                vl_sum += vl_buffer[i];
-                vr_sum += vr_buffer[i];
-            }
-
-            fl_sum /= 64;
-            fr_sum /= 64;
-            bl_sum /= 64;
-            br_sum /= 64;
-            vl_sum /= 64;
-            vr_sum /= 64;
-
-            frontLeft.writeMicroseconds((fl_sum >= 1100 && fl_sum <= 1900) ? fl_sum : 1500);
-            frontRight.writeMicroseconds((fr_sum >= 1100 && fr_sum <= 1900) ? fr_sum : 1500);
-            backLeft.writeMicroseconds((bl_sum >= 1100 && bl_sum <= 1900) ? bl_sum : 1500);
-            backRight.writeMicroseconds((br_sum >= 1100 && br_sum <= 1900) ? br_sum : 1500);
-            leftVertical.writeMicroseconds((vl_sum >= 1100 && vl_sum <= 1900) ? vl_sum : 1500);
-            rightVertical.writeMicroseconds((vr_sum >= 1100 && vr_sum <= 1900) ? vr_sum : 1500);
+            mainLoop();
         }
     }
-
     delay(10);
-}
-
-void ParseCommands(String dataFromPi)
-{
-    if (dataFromPi == "TYPE") // if the Pi polled for type rather than sending a motor call, reply with "MOTOR" and return
-    {
-        Serial.println("MOTOR");
-        return;
-    }
-
-    // this array is as follows: [0] = movement inputs, [1] = right stick, [2] = claw states + buttons
-    String dataFromPiArray[4];
-    String tmp_str = dataFromPi;
-
-    // split the data into the three elements
-    dataFromPiArray[3] = tmp_str.substring(0, tmp_str.indexOf('\t'));
-    tmp_str = tmp_str.substring(tmp_str.indexOf('\t') + 1);
-    dataFromPiArray[0] = tmp_str.substring(0, tmp_str.indexOf('\t'));
-    tmp_str = tmp_str.substring(tmp_str.indexOf('\t') + 1);
-    dataFromPiArray[1] = tmp_str.substring(0, tmp_str.indexOf('\t'));
-    tmp_str = tmp_str.substring(tmp_str.indexOf('\t') + 1);
-    dataFromPiArray[2] = tmp_str.substring(0, tmp_str.indexOf('\t'));
-
-    // parse the first element
-    tmp_str = dataFromPiArray[0];
-    String x_String = tmp_str.substring(0, tmp_str.indexOf(','));
-    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
-    String z_String = tmp_str.substring(0, tmp_str.indexOf(','));
-
-    // parse the second element
-    tmp_str = dataFromPiArray[1];
-    String speed_Rotation_String = tmp_str.substring(0, tmp_str.indexOf(','));
-    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
-    String speed_Y_String = tmp_str.substring(0, tmp_str.indexOf(','));
-    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
-
-    // parse the third element
-    tmp_str = dataFromPiArray[2];
-    String L_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
-    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
-    String L_trigger_String = tmp_str.substring(0, tmp_str.indexOf(','));
-    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
-    String R_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
-    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
-    String R_trigger_String = tmp_str.substring(0, tmp_str.indexOf(','));
-    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
-    String top_button_String = tmp_str.substring(0, tmp_str.indexOf(','));
-    tmp_str = tmp_str.substring(tmp_str.indexOf(',') + 1);
-    String bottom_button_String = tmp_str;
-
-    stick_or_pad = dataFromPiArray[3].charAt(0);
-
-    // convert the strings to ints and floats
-
-    switch (stick_or_pad)
-    {
-
-    case 'S':
-        // stick
-        speed_X = x_String.toFloat();
-        speed_Z = z_String.toFloat();
-        break;
-
-    case 'D':
-        // dpad
-        x = -1 * x_String.toInt();
-        z = -1 * z_String.toInt();
-        break;
-
-    default:
-        break;
-    }
-
-    speed_Rotation = speed_Rotation_String.toFloat();
-    speed_Y = speed_Y_String.toFloat();
-
-    int L_trigger = L_trigger_String.toFloat() >= 0.5f ? -1 : 0;
-    int R_trigger = R_trigger_String.toFloat() >= 0.5f ? 1 : 0;
-
-    state_Claw = R_trigger + L_trigger;
-
-    int L_button = L_button_String.toInt();
-    int R_button = R_button_String.toInt();
-
-    verticalLock = R_button;
-    rotationLock = L_button;
-
-    int top_button = top_button_String.toInt();       // x on XBOX
-    int bottom_button = bottom_button_String.toInt(); // a on XBOX
-
-    if (top_button == 1 && last_top == 0) // rising edge
-    {
-        if (speedMod < 10)
-        {
-            speedMod++;
-        }
-    }
-    else if (bottom_button == 1 && last_bottom == 0)
-    {
-        if (speedMod > 0)
-        {
-            speedMod--;
-        }
-    }
-
-    last_top = top_button;
-    last_bottom = bottom_button;
-
-    Serial.println(state_Claw);
 }
