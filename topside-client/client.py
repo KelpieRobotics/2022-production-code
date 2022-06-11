@@ -80,9 +80,9 @@ class main:
                 # COM Port is active
                 if self.sendComPortCommands:
                     # Use the following format if using both joysticks
-                    formmatedData = f"S\t{gamePadSticks[1]},{gamePadSticks[2]}\t{gamePadSticks[4]},{gamePadSticks[5]}\t{gamePadTriggers[0]},{gamePadTriggers[1]},{gamePadTriggers[2]},{gamePadTriggers[3]}"
+                    # formmatedData = f"S\t{gamePadSticks[1]},{gamePadSticks[2]}\t{gamePadSticks[4]},{gamePadSticks[5]}\t{gamePadTriggers[0]},{gamePadTriggers[1]},{gamePadTriggers[2]},{gamePadTriggers[3]}"
                     # Use the following format if using dpad and right joystick
-                    # formmatedData = f"D\t{gamePadButtons[6]},{gamePadButtons[7]}\t{gamePadSticks[4]},{gamePadSticks[5]}\t{gamePadTriggers[0]},{gamePadTriggers[1]},{gamePadTriggers[2]},{gamePadTriggers[3]}"
+                    formmatedData = f"D\t{gamePadButtons[6]},{gamePadButtons[7]}\t{gamePadSticks[4]},{gamePadSticks[5]}\t{gamePadTriggers[0]},{gamePadTriggers[1]},{gamePadTriggers[2]},{gamePadTriggers[3]}"
 
                     print(self.tcp_motors.sendData("MOT"+formmatedData))
                 # SELECT + START to stop threading
