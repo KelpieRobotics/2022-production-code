@@ -21,17 +21,35 @@ class main:
         self.tcp_motors = None
         self.tcp_sensors = None
         self.dataSave = dataLogger(["Time(s)","Humidity(%)","Enclosure Temperature(C)","Leak","Vin(Vrms)","Vout(Vrms)","Current Out(A)", "PMBus Temperature(C)", "Power Out(W)"])
-        print("READY")
+        # print("READY")
 
 
 
     def startSockets(self):
         logging.info("Starting Sockets")
-        self.tcp_motors = tcpClient(self.serverIP, self.motorPort)
-        self.tcp_sensors = tcpClient(self.serverIP, self.sensorPort)
-        self.tcp_motors.startConnection()
-        self.tcp_sensors.startConnection()
-
+        successfulConection = False
+        while not successfulConection:
+            try:
+                self.tcp_motors = tcpClient(self.serverIP, self.motorPort)
+                self.tcp_sensors = tcpClient(self.serverIP, self.sensorPort)
+                self.tcp_motors.startConnection()
+                self.tcp_sensors.startConnection()
+                successfulConection = True
+            except ConnectionRefusedError as e:
+                print(f"Connection Refused Error: {e}")
+                logging.debug(f"Starting Socket - Connection Refused Error: {e}")
+                successfulConection = False
+            except OSError as e:
+                print(f"OS Error: {e}")
+                logging.debug(f"Starting Socket - OS Error: {e}")
+                successfulConection = False
+            except Exception as e:
+                print(f"Error: {e}")
+                logging.debug(f"Starting Socket - Error: {e}")
+                successfulConection = False
+            # Retry connection
+            time.sleep(1)
+        print("Connected")
 
 
 
@@ -109,6 +127,7 @@ class main:
 if __name__ == '__main__':
     logging.basicConfig(filename = "log.log", encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     client = main("10.10.2.5", 8000)
+    # client = main("localhost", 8000)
     client.startSockets()
     client.startThreads()
 
