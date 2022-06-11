@@ -1,4 +1,3 @@
-from cmath import exp
 from tcpClient import tcpClient
 from gamePad import XboxController
 from dataLogger import dataLogger
