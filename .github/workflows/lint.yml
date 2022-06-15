@@ -43,8 +43,8 @@ jobs:
       - name: Run Arduino Linter - enclosure-motors
         uses: arduino/arduino-lint-action@v1
         with:
-          path: rov-arduino\enclosure-motors
+          path: rov-arduino/enclosure-motors
       - name: Run Arduino Linter - enclosure-sensors
         uses: arduino/arduino-lint-action@v1
         with:
-          path: rov-arduino\enclosure-sensors
+          path: rov-arduino/enclosure-sensors
