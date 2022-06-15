@@ -1,0 +1,50 @@
+name: Lint Code Base
+
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the main branch
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+# Linter for Python Code
+  run-python-linter:
+    name: Run python linter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+
+      - name: Install Python dependencies
+        run: pip install flake8
+
+      - name: Run Python linter
+        uses: wearerequired/lint-action@v2
+        with:
+          flake8: true
+# Linter for arduino code
+  run-arduino-linter:
+    name: Run Arduino linter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+      - name: Run Arduino Linter - enclosure-motors
+        uses: arduino/arduino-lint-action@v1
+        with:
+          path: rov-arduino/enclosure-motors
+      - name: Run Arduino Linter - enclosure-sensors
+        uses: arduino/arduino-lint-action@v1
+        with:
+          path: rov-arduino/sensors-motors
