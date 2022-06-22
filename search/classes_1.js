@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['cartesiancoordinates_0',['CartesianCoordinates',['../struct_cartesian_coordinates.html',1,'']]]
+  ['datalogger_0',['dataLogger',['../classdata_logger_1_1data_logger.html',1,'dataLogger']]]
 ];
